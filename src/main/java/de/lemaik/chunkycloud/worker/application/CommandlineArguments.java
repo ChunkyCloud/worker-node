@@ -1,0 +1,73 @@
+/*
+ * Copyright (C) 2016-2026 leMaik and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.lemaik.chunkycloud.worker.application;
+
+import com.lexicalscope.jewel.cli.Option;
+
+import java.io.File;
+
+/**
+ * Commandline arguments, parsed by {@link com.lexicalscope.jewel.cli.CliFactory}.
+ */
+public interface CommandlineArguments {
+    @Option(longName = "cpu-load",
+            description = "Maximum CPU load",
+            defaultValue = "100")
+    int getCpuLoad();
+
+    @Option(shortName = "t",
+            longName = "thread-count",
+            description = "Number of threads per processes",
+            defaultValue = "2")
+    int getThreads();
+
+    @Option(longName = "texturepacks-path",
+            description = "path for texturepacks",
+            defaultToNull = true)
+    File getTexturepacksPath();
+
+    @Option(longName = "job-path",
+            description = "path for temporary job data",
+            defaultToNull = true)
+    File getJobPath();
+
+    @Option(longName = "api",
+            description = "URL of the ChunkyCloud API endpoint",
+            defaultValue = "https://api.chunkycloud.lemaik.de")
+    String getApiUrl();
+
+    @Option(longName = "cache-directory",
+            description = "cache directory for scene files",
+            defaultToNull = true)
+    File getCacheDirectory();
+
+    @Option(longName = "max-cache-size",
+            description = "maximum cache size, in mb",
+            defaultToNull = true)
+    Long getMaxCacheSize();
+
+    @Option(longName = "api-key",
+            description = "API Key",
+            defaultToNull = true)
+    String getApiKey();
+
+    @Option(longName = "api-key-file",
+            description = "Path of a file that contains the API Key (e.g. for container secrets)",
+            defaultToNull = true)
+    String getApiKeyFile();
+}

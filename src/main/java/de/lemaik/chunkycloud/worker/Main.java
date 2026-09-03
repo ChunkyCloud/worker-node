@@ -1,0 +1,87 @@
+/*
+ * Copyright (C) 2016-2026 leMaik and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.lemaik.chunkycloud.worker;
+
+import com.lexicalscope.jewel.cli.Cli;
+import com.lexicalscope.jewel.cli.CliFactory;
+import de.lemaik.chunkycloud.worker.application.CommandlineArguments;
+import de.lemaik.chunkycloud.worker.application.WorkerApplication;
+import de.lemaik.chunkycloud.worker.application.WorkerSettings;
+import de.lemaik.chunkycloud.worker.chunky.FilteringLogReceiver;
+import de.lemaik.chunkycloud.worker.chunky.Slf4jLogReceiver;
+import se.llbit.log.Level;
+import se.llbit.log.Log;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
+
+/**
+ * The main class.
+ */
+public class Main {
+    public static final String VERSION;
+    public static final int VERSION_CODE = 1;
+
+    static {
+        String version = Main.class.getPackage().getImplementationVersion();
+        VERSION = version == null ? "unknown" : version;
+        Log.setReceiver(new FilteringLogReceiver(new Slf4jLogReceiver()), Level.ERROR, Level.WARNING, Level.INFO);
+    }
+
+    private Main() {
+    }
+
+    public static void main(String[] args) {
+        Cli<CommandlineArguments> cli = CliFactory.createCli(CommandlineArguments.class);
+
+        CommandlineArguments arguments;
+        try {
+            arguments = cli.parseArguments(args);
+        } catch (Exception e) {
+            System.out.println(cli.getHelpMessage());
+            return;
+        }
+
+        String apiKey = Optional.ofNullable(arguments.getApiKey()).orElse(System.getenv("API_KEY"));
+        if (apiKey == null) {
+            String apiKeyFile = arguments.getApiKeyFile();
+            if (apiKeyFile != null) {
+                try {
+                    apiKey = Files.readString(Path.of(apiKeyFile)).trim();
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to read the API key from " + apiKeyFile, e);
+                }
+            }
+            if (apiKey == null) {
+                System.err.println(
+                        "Missing API key. Use the --api-key or --api-key-file option or the API_KEY environment variable to specify one.");
+                System.exit(-1);
+            }
+        }
+
+        WorkerSettings settings = new WorkerSettings(
+                arguments.getApiUrl(),
+                arguments.getCacheDirectory(),
+                arguments.getMaxCacheSize(),
+                apiKey
+        );
+        new WorkerApplication(settings).start();
+    }
+}

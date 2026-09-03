@@ -1,0 +1,46 @@
+/*
+ * Copyright (C) 2026 leMaik and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.lemaik.chunkycloud.worker.api;
+
+import java.util.Optional;
+
+public class FinishMergeTaskResponse {
+    private UploadUrls uploadUrls;
+
+    public UploadUrls getUploadUrls() {
+        return uploadUrls;
+    }
+
+    public static class UploadUrls {
+        private String image;
+        private String thumbnailImage;
+        private String dump;
+
+        public String getImage() {
+            return image;
+        }
+
+        public String getThumbnailImage() {
+            return thumbnailImage;
+        }
+
+        public Optional<String> getDump() {
+            return Optional.ofNullable(dump);
+        }
+    }
+}
