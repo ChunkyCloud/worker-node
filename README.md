@@ -70,16 +70,16 @@ You can use a Docker secret to specify the API key, just launch with `--api-key-
 > [!CAUTION]
 > Please **do not run customized worker nodes against leMaik's ChunkyCloud server**. Your contributions are very welcome, but please test them against a local ChunkyCloud server instance.
 
-The project builds a self-contained jar file with its dependencies. You'll need Maven 3.
+The project builds a self-contained jar file with its dependencies.
 
 ```bash
-mvn package
+./gradlew build
 ```
 
 The runnable jar file is written to:
 
 ```text
-target/workernode-jar-with-dependencies.jar
+build/libs/workernode.jar
 ```
 
 The main entry point is

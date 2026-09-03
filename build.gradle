@@ -1,0 +1,74 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '9.6.1'
+}
+
+group = 'de.lemaik.chunkycloud'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'lemaik-chunky'
+        url = uri('https://repo.lemaik.de/')
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    implementation 'se.llbit:chunky-core:2.5.0-SNAPSHOT.477.gf2f7ab8'
+    implementation 'org.apache.commons:commons-math3:3.2'
+    implementation 'it.unimi.dsi:fastutil:8.4.4'
+
+    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.26.0'
+    implementation 'com.lexicalscope.jewelcli:jewelcli:0.8.9'
+    implementation 'com.squareup.okhttp3:okhttp:3.4.1'
+    implementation 'com.google.code.gson:gson:2.9.0'
+
+    testImplementation 'junit:junit:4.11'
+}
+
+jar {
+    archiveBaseName = 'workernode'
+
+    manifest {
+        attributes(
+            'Main-Class': 'de.lemaik.chunkycloud.worker.Main',
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.version
+        )
+    }
+}
+
+shadowJar {
+    archiveBaseName = 'workernode'
+    archiveClassifier = ''
+    archiveVersion = ''
+
+    manifest {
+        attributes(
+            'Main-Class': 'de.lemaik.chunkycloud.worker.Main'
+        )
+    }
+
+    exclude('textures/**')
+    exclude('icons/**')
+
+    minimize {
+        exclude(dependency('org.slf4j:.*'))
+        exclude(dependency('org.apache.logging.log4j:.*'))
+    }
+}
+
+build {
+    dependsOn shadowJar
+}
