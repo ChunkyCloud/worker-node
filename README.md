@@ -28,13 +28,13 @@ result, and marks the job as finished.
 
 ## Configuration
 
-| Option              | Default                             | Description                                                            |
-| ------------------- | ----------------------------------- | ---------------------------------------------------------------------- |
-| `--api`             | `https://api.chunkycloud.lemaik.de` | ChunkyCloud API endpoint.                                              |
-| `--api-key`         | unset                               | Worker node API key.                                                   |
-| `--api-key-file`    | unset                               | File containing the worker node API key. Useful for container secrets. |
-| `--cache-directory` | `./cc_cache`                        | HTTP cache directory for downloaded scene resources.                   |
-| `--max-cache-size`  | `512`                               | Maximum HTTP cache size, in MB.                                        |
+| Option              | Default                       | Description                                                           |
+| ------------------- | ----------------------------- | --------------------------------------------------------------------- |
+| `--api`             | `https://api.chunkycloud.net` | ChunkyCloud API endpoint                                              |
+| `--api-key`         | unset                         | Worker node API key                                                   |
+| `--api-key-file`    | unset                         | File containing the worker node API key. Useful for container secrets |
+| `--cache-directory` | `./cc_cache`                  | HTTP cache directory for downloaded scene resources                   |
+| `--max-cache-size`  | `512`                         | Maximum HTTP cache size, in MB                                        |
 
 The API key can also be provided through the `API_KEY` environment variable.
 
