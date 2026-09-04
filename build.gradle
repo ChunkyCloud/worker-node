@@ -60,6 +60,7 @@ shadowJar {
 
     exclude('textures/**')
     exclude('icons/**')
+    exclude("META-INF/*.kotlin_module")
 
     minimize {
         exclude(dependency('org.slf4j:.*'))
