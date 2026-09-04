@@ -2,3 +2,5 @@
 .gradle
 build
 *.iml
+cc_cache
+cc_chunky

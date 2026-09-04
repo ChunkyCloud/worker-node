@@ -31,7 +31,7 @@ dependencies {
 
     implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.26.0'
     implementation 'com.lexicalscope.jewelcli:jewelcli:0.8.9'
-    implementation 'com.squareup.okhttp3:okhttp:3.4.1'
+    implementation 'com.squareup.okhttp3:okhttp:5.5.0'
     implementation 'com.google.code.gson:gson:2.9.0'
 
     testImplementation 'junit:junit:4.11'
