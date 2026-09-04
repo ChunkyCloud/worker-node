@@ -28,9 +28,9 @@ public class Tile {
 
     private int height;
 
-    private JobFiles.File image;
+    private FileReference image;
 
-    private JobFiles.File dump;
+    private FileReference dump;
 
     public int getX() {
         return x;
@@ -48,11 +48,11 @@ public class Tile {
         return height;
     }
 
-    public JobFiles.File getImage() {
+    public FileReference getImage() {
         return image;
     }
 
-    public Optional<JobFiles.File> getDump() {
+    public Optional<FileReference> getDump() {
         return Optional.ofNullable(dump);
     }
 }

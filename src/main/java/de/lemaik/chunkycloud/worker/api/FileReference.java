@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2026 leMaik and contributors
+ * Copyright (C) 2026 leMaik and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,15 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.lemaik.chunkycloud.worker.chunky;
+package de.lemaik.chunkycloud.worker.api;
 
-public class RenderException extends Exception {
+public class FileReference {
+    private String url;
 
-  public RenderException(String message) {
-    super(message);
-  }
-
-  public RenderException(String message, Exception inner) {
-    super(message, inner);
-  }
+    public String getUrl() {
+        return url;
+    }
 }
