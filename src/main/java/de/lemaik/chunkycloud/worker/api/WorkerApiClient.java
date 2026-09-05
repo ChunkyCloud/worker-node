@@ -110,7 +110,7 @@ public class WorkerApiClient {
     public CompletableFuture<FinishMergeTaskResponse> getMergeTaskUploadUrls(int jobId) {
         CompletableFuture<FinishMergeTaskResponse> result = new CompletableFuture<>();
         client.newCall(new Request.Builder()
-                        .url(baseUrl + "/worker-nodes/me/tasks/merge/" + jobId + "/upload").post(RequestBody.create(new byte[0]))
+                        .url(baseUrl + "/worker-nodes/me/tasks/merge/" + jobId + "/upload").post(RequestBody.EMPTY)
                         .build())
                 .enqueue(new Callback() {
                     @Override
@@ -139,7 +139,7 @@ public class WorkerApiClient {
     public CompletableFuture<Void> finishMergeTask(int jobId) {
         CompletableFuture<Void> result = new CompletableFuture<>();
         client.newCall(new Request.Builder()
-                        .url(baseUrl + "/worker-nodes/me/tasks/merge/" + jobId + "/finish").post(RequestBody.create(new byte[0]))
+                        .url(baseUrl + "/worker-nodes/me/tasks/merge/" + jobId + "/finish").post(RequestBody.EMPTY)
                         .build())
                 .enqueue(new Callback() {
                     @Override
