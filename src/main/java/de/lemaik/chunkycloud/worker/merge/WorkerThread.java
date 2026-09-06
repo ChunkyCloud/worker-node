@@ -147,6 +147,7 @@ public class WorkerThread extends Thread {
 
                 long endTime = System.currentTimeMillis();
                 LOGGER.info("Merge done for job {} (took {} ms)", task.getJob().getId(), endTime - startTime);
+                nextRestartDelaySeconds = 1;
             } catch (CancellationException e) {
                 LOGGER.info("Task cancelled", e);
             } catch (InterruptedException e) {
