@@ -27,7 +27,6 @@ import se.llbit.chunky.main.Version;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public class WorkerApiClient {
@@ -75,134 +74,69 @@ public class WorkerApiClient {
                 .build();
     }
 
-    public CompletableFuture<MergeTask> getNextTask() {
-        CompletableFuture<MergeTask> result = new CompletableFuture<>();
-        client.newCall(new Request.Builder()
-                        .url(baseUrl + "/worker-nodes/me/tasks/next").get()
-                        .build())
-                .enqueue(new Callback() {
-                    @Override
-                    public void onFailure(Call call, IOException e) {
-                        result.completeExceptionally(e);
-                    }
-
-                    @Override
-                    public void onResponse(Call call, Response response) {
-                        try (response) {
-                            if (response.code() == 200) {
-                                try (InputStreamReader reader = new InputStreamReader(response.body().byteStream())) {
-                                    result.complete(gson.fromJson(reader, MergeTask.class));
-                                } catch (IOException e) {
-                                    result.completeExceptionally(e);
-                                }
-                            } else if (response.code() == 204) {
-                                result.complete(null);
-                            } else {
-                                result.completeExceptionally(new IOException("The merge task could not be downloaded " + response.code()));
-                            }
-                        }
-                    }
-                });
-
-        return result;
+    public MergeTask getNextTask() throws IOException {
+        try (Response response = client.newCall(new Request.Builder()
+                .url(baseUrl + "/worker-nodes/me/tasks/next").get()
+                .build()).execute()) {
+            if (response.code() == 200) {
+                try (InputStreamReader reader = new InputStreamReader(response.body().byteStream())) {
+                    return gson.fromJson(reader, MergeTask.class);
+                }
+            } else if (response.code() == 204) {
+                return null;
+            } else {
+                throw new IOException("The merge task could not be downloaded " + response.code());
+            }
+        }
     }
 
-    public CompletableFuture<FinishMergeTaskResponse> getMergeTaskUploadUrls(int jobId) {
-        CompletableFuture<FinishMergeTaskResponse> result = new CompletableFuture<>();
-        client.newCall(new Request.Builder()
-                        .url(baseUrl + "/worker-nodes/me/tasks/merge/" + jobId + "/upload").post(RequestBody.EMPTY)
-                        .build())
-                .enqueue(new Callback() {
-                    @Override
-                    public void onFailure(Call call, IOException e) {
-                        result.completeExceptionally(e);
-                    }
-
-                    @Override
-                    public void onResponse(Call call, Response response) {
-                        try (response) {
-                            if (response.isSuccessful()) {
-                                try (InputStreamReader reader = new InputStreamReader(response.body().byteStream())) {
-                                    result.complete(gson.fromJson(reader, FinishMergeTaskResponse.class));
-                                } catch (IOException e) {
-                                    result.completeExceptionally(e);
-                                }
-                            } else {
-                                result.completeExceptionally(new IOException("The merge task could not be finished"));
-                            }
-                        }
-                    }
-                });
-        return result;
+    public FinishMergeTaskResponse getMergeTaskUploadUrls(int jobId) throws IOException {
+        try (Response response = client.newCall(new Request.Builder()
+                .url(baseUrl + "/worker-nodes/me/tasks/merge/" + jobId + "/upload").post(RequestBody.EMPTY)
+                .build()).execute()) {
+            if (response.isSuccessful()) {
+                try (InputStreamReader reader = new InputStreamReader(response.body().byteStream())) {
+                    return gson.fromJson(reader, FinishMergeTaskResponse.class);
+                }
+            } else {
+                throw new IOException("The merge task could not be finished");
+            }
+        }
     }
 
-    public CompletableFuture<Void> finishMergeTask(int jobId) {
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        client.newCall(new Request.Builder()
-                        .url(baseUrl + "/worker-nodes/me/tasks/merge/" + jobId + "/finish").post(RequestBody.EMPTY)
-                        .build())
-                .enqueue(new Callback() {
-                    @Override
-                    public void onFailure(Call call, IOException e) {
-                        result.completeExceptionally(e);
-                    }
-
-                    @Override
-                    public void onResponse(Call call, Response response) {
-                        try (response) {
-                            if (response.isSuccessful()) {
-                                result.complete(null);
-                            } else {
-                                result.completeExceptionally(new IOException("The task could not be finished, status " + response.code() + " " + response.body().string()));
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                });
-        return result;
+    public void finishMergeTask(int jobId) throws IOException {
+        try (Response response = client.newCall(new Request.Builder()
+                .url(baseUrl + "/worker-nodes/me/tasks/merge/" + jobId + "/finish").post(RequestBody.EMPTY)
+                .build()).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("The task could not be finished, status " + response.code() + " " + response.body().string());
+            }
+        }
     }
 
-    public CompletableFuture<Void> uploadFile(String url, Buffer body, String mimeType) {
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        uploadClient.newCall(new Request.Builder()
-                        .url(url)
-                        .put(new RequestBody() {
-                            @Override
-                            public MediaType contentType() {
-                                return MediaType.parse(mimeType);
-                            }
-
-                            @Override
-                            public long contentLength() throws IOException {
-                                return body.size();
-                            }
-
-                            @Override
-                            public void writeTo(BufferedSink sink) throws IOException {
-                                sink.write(body, body.size());
-                            }
-                        })
-                        .build()
-                )
-                .enqueue(new Callback() {
+    public void uploadFile(String url, Buffer body, String mimeType) throws IOException {
+        try (Response response = uploadClient.newCall(new Request.Builder()
+                .url(url)
+                .put(new RequestBody() {
                     @Override
-                    public void onFailure(Call call, IOException e) {
-                        result.completeExceptionally(e);
+                    public MediaType contentType() {
+                        return MediaType.parse(mimeType);
                     }
 
                     @Override
-                    public void onResponse(Call call, Response response) throws IOException {
-                        try (response) {
-                            if (response.isSuccessful()) {
-                                result.complete(null);
-                            } else {
-                                result.completeExceptionally(new IOException(
-                                        "Upload failed" + response.code() + " " + response.body().string()));
-                            }
-                        }
+                    public long contentLength() throws IOException {
+                        return body.size();
                     }
-                });
-        return result;
+
+                    @Override
+                    public void writeTo(BufferedSink sink) throws IOException {
+                        sink.write(body, body.size());
+                    }
+                })
+                .build()).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("Upload failed" + response.code() + " " + response.body().string());
+            }
+        }
     }
 }

@@ -38,8 +38,6 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
 
 /**
  * A worker node worker thread.
@@ -59,7 +57,7 @@ public class WorkerThread extends Thread {
         while (!interrupted()) {
             LOGGER.info("Polling for new task");
             try {
-                MergeTask task = apiClient.getNextTask().get();
+                MergeTask task = apiClient.getNextTask();
                 if (task == null) {
                     Thread.sleep(5000L);
                     continue;
@@ -114,12 +112,12 @@ public class WorkerThread extends Thread {
                     resultDump = result.asDump(spp, renderTime);
                 }
 
-                FinishMergeTaskResponse finishMergeResponse = apiClient.getMergeTaskUploadUrls(task.getJob().getId()).get();
+                FinishMergeTaskResponse finishMergeResponse = apiClient.getMergeTaskUploadUrls(task.getJob().getId());
 
                 // Upload image
                 try (Buffer buffer = new Buffer()) {
                     ImageIO.write(resultImage, "png", buffer.outputStream());
-                    apiClient.uploadFile(finishMergeResponse.getUploadUrls().getImage(), buffer, "image/png").get();
+                    apiClient.uploadFile(finishMergeResponse.getUploadUrls().getImage(), buffer, "image/png");
                 }
 
                 // Upload image
@@ -132,38 +130,36 @@ public class WorkerThread extends Thread {
                         param.setCompressionQuality(0.8f);
                         writer.write(null, new IIOImage(thumbnailImage, null, null), param);
                     }
-                    apiClient.uploadFile(finishMergeResponse.getUploadUrls().getThumbnailImage(), buffer, "image/jpeg").get();
+                    apiClient.uploadFile(finishMergeResponse.getUploadUrls().getThumbnailImage(), buffer, "image/jpeg");
                 }
 
                 // Upload dump
                 if (resultDump != null) {
                     try (Buffer buffer = new Buffer()) {
                         RenderDump.save(buffer.outputStream(), resultDump, TaskTracker.NONE, FloatingPointCompressorDumpFormat.INSTANCE);
-                        apiClient.uploadFile(finishMergeResponse.getUploadUrls().getDump().orElseThrow(), buffer, "application/octet-stream").get();
+                        apiClient.uploadFile(finishMergeResponse.getUploadUrls().getDump().orElseThrow(), buffer, "application/octet-stream");
                     }
                 }
 
-                apiClient.finishMergeTask(task.getJob().getId()).get();
+                apiClient.finishMergeTask(task.getJob().getId());
 
                 long endTime = System.currentTimeMillis();
                 LOGGER.info("Merge done for job {} (took {} ms)", task.getJob().getId(), endTime - startTime);
                 nextRestartDelaySeconds = 1;
-            } catch (CancellationException e) {
-                LOGGER.info("Task cancelled", e);
             } catch (InterruptedException e) {
                 LOGGER.info("Interrupted", e);
                 break;
-            } catch (ExecutionException | IOException e) {
+            } catch (IOException e) {
                 LOGGER.error("Error", e);
                 try {
-                    int delaySeconds = Math.min(MAX_RESTART_DELAY_SECONDS, nextRestartDelaySeconds);
+                    int delaySeconds = nextRestartDelaySeconds;
                     LOGGER.info("Waiting {} seconds before trying again", delaySeconds);
                     Thread.sleep(delaySeconds * 1000L);
                 } catch (InterruptedException ex) {
                     LOGGER.info("Interrupted", e);
                     break;
                 }
-                nextRestartDelaySeconds *= 2;
+                nextRestartDelaySeconds = Math.min(nextRestartDelaySeconds * 2, MAX_RESTART_DELAY_SECONDS);
             }
 
             if (interrupted()) {
