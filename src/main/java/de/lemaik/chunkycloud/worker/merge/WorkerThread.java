@@ -21,6 +21,7 @@ import de.lemaik.chunkycloud.worker.api.FinishMergeTaskResponse;
 import de.lemaik.chunkycloud.worker.api.MergeTask;
 import de.lemaik.chunkycloud.worker.api.Tile;
 import de.lemaik.chunkycloud.worker.api.WorkerApiClient;
+import okhttp3.ResponseBody;
 import okio.Buffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +37,6 @@ import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
 
 /**
  * A worker node worker thread.
@@ -69,7 +68,10 @@ public class WorkerThread extends Thread {
                 // Merge tile images
                 BufferedImage resultImage = new BufferedImage(task.getJob().getWidth(), task.getJob().getHeight(), BufferedImage.TYPE_INT_ARGB);
                 for (Tile tile : task.getTiles()) {
-                    BufferedImage tileImage = ImageIO.read(new URL(tile.getImage().getUrl()));
+                    BufferedImage tileImage;
+                    try (ResponseBody body = apiClient.downloadFile(tile.getImage().getUrl())) {
+                        tileImage = ImageIO.read(body.byteStream());
+                    }
                     Graphics2D graphics = resultImage.createGraphics();
                     try {
                         graphics.drawImage(tileImage, tile.getX(), tile.getY(), null);
@@ -99,8 +101,8 @@ public class WorkerThread extends Thread {
                     long renderTime = 0;
                     for (Tile tile : task.getTiles()) {
                         if (tile.getDump().isPresent()) {
-                            try (InputStream inputStream = new URL(tile.getDump().get().getUrl()).openStream()) {
-                                RenderDump dump = RenderDump.load(inputStream, TaskTracker.NONE);
+                            try (ResponseBody body = apiClient.downloadFile(tile.getDump().get().getUrl())) {
+                                RenderDump dump = RenderDump.load(body.byteStream(), TaskTracker.NONE);
                                 if (spp == 0) {
                                     spp = dump.getMetadata().spp();
                                 }

@@ -104,6 +104,25 @@ public class WorkerApiClient {
         }
     }
 
+    public ResponseBody downloadFile(String url) throws IOException {
+        Response response = client.newCall(new Request.Builder()
+                .url(url)
+                .get()
+                .build()).execute();
+        if (!response.isSuccessful()) {
+            try (response) {
+                throw new IOException("Download failed" + response.code() + " " + response.body().string());
+            }
+        }
+
+        ResponseBody body = response.body();
+        if (body == null) {
+            response.close();
+            throw new IOException("Download failed: response body is empty");
+        }
+        return body;
+    }
+
     public void finishMergeTask(int jobId) throws IOException {
         try (Response response = client.newCall(new Request.Builder()
                 .url(baseUrl + "/worker-nodes/me/tasks/merge/" + jobId + "/finish").post(RequestBody.EMPTY)
