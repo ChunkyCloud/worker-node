@@ -21,7 +21,6 @@ import com.google.gson.Gson;
 import de.lemaik.chunkycloud.worker.Main;
 import okhttp3.*;
 import okio.Buffer;
-import okio.BufferedSink;
 import se.llbit.chunky.main.Version;
 
 import java.io.File;
@@ -136,22 +135,7 @@ public class WorkerApiClient {
     public void uploadFile(String url, Buffer body, String mimeType) throws IOException {
         try (Response response = uploadClient.newCall(new Request.Builder()
                 .url(url)
-                .put(new RequestBody() {
-                    @Override
-                    public MediaType contentType() {
-                        return MediaType.parse(mimeType);
-                    }
-
-                    @Override
-                    public long contentLength() throws IOException {
-                        return body.size();
-                    }
-
-                    @Override
-                    public void writeTo(BufferedSink sink) throws IOException {
-                        sink.write(body, body.size());
-                    }
-                })
+                .put(RequestBody.create(body.snapshot(), MediaType.parse(mimeType)))
                 .build()).execute()) {
             if (!response.isSuccessful()) {
                 throw new IOException("Upload failed" + response.code() + " " + response.body().string());
