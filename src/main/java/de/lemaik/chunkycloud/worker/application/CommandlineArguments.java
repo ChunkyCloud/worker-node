@@ -25,27 +25,6 @@ import java.io.File;
  * Commandline arguments, parsed by {@link com.lexicalscope.jewel.cli.CliFactory}.
  */
 public interface CommandlineArguments {
-    @Option(longName = "cpu-load",
-            description = "Maximum CPU load",
-            defaultValue = "100")
-    int getCpuLoad();
-
-    @Option(shortName = "t",
-            longName = "thread-count",
-            description = "Number of threads per processes",
-            defaultValue = "2")
-    int getThreads();
-
-    @Option(longName = "texturepacks-path",
-            description = "path for texturepacks",
-            defaultToNull = true)
-    File getTexturepacksPath();
-
-    @Option(longName = "job-path",
-            description = "path for temporary job data",
-            defaultToNull = true)
-    File getJobPath();
-
     @Option(longName = "api",
             description = "URL of the ChunkyCloud API endpoint",
             defaultValue = "https://api.chunkycloud.net")
