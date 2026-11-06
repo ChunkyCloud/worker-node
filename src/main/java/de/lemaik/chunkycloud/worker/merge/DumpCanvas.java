@@ -24,10 +24,12 @@ public class DumpCanvas {
     private final double[] buffer;
     private final int width;
     private final int height;
+    private final int totalSpp;
 
-    public DumpCanvas(int width, int height) {
+    public DumpCanvas(int width, int height, int totalSpp) {
         this.width = width;
         this.height = height;
+        this.totalSpp = totalSpp;
         this.buffer = new double[width * height * 3];
     }
 
@@ -44,15 +46,26 @@ public class DumpCanvas {
         int dumpHeight = dump.getMetadata().height();
         double[] dumpBuffer = dump.getSampleBuffer();
 
-        for (int row = 0; row < dumpHeight; row++) {
-            System.arraycopy(
-                    dumpBuffer, row * dumpWidth * 3,
-                    buffer, ((y + row) * width + x) * 3,
-                    dumpWidth * 3);
+        if (dump.getMetadata().spp() == totalSpp) {
+            for (int row = 0; row < dumpHeight; row++) {
+                int srcOffset = row * dumpWidth * 3;
+                int dstOffset = ((y + row) * width + x) * 3;
+
+                System.arraycopy(dumpBuffer, srcOffset, buffer, dstOffset, dumpWidth * 3);
+            }
+        } else {
+            for (int row = 0; row < dumpHeight; row++) {
+                int srcOffset = row * dumpWidth * 3;
+                int dstOffset = ((y + row) * width + x) * 3;
+
+                for (int i = 0; i < dumpWidth * 3; i++) {
+                    buffer[dstOffset + i] += dumpBuffer[srcOffset + i];
+                }
+            }
         }
     }
 
-    public RenderDump asDump(int spp, long renderTime) {
-        return new RenderDump(new DumpMetadata(getWidth(), getHeight(), spp, renderTime), buffer);
+    public RenderDump asDump(long renderTime) {
+        return new RenderDump(new DumpMetadata(getWidth(), getHeight(), totalSpp, renderTime), buffer);
     }
 }

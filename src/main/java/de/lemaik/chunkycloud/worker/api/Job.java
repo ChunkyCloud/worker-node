@@ -21,6 +21,7 @@ public class Job {
     private int id;
     private int width;
     private int height;
+    private int spp;
 
     public int getId() {
         return id;
@@ -32,5 +33,9 @@ public class Job {
 
     public int getHeight() {
         return height;
+    }
+
+    public int getSpp() {
+        return spp;
     }
 }

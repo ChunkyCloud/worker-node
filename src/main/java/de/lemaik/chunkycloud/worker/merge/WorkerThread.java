@@ -88,22 +88,16 @@ public class WorkerThread extends Thread {
                 // Merge tile dumps, if applicable
                 RenderDump resultDump = null;
                 if (task.getTiles().get(0).getDump().isPresent()) {
-                    DumpCanvas result = new DumpCanvas(task.getJob().getWidth(), task.getJob().getHeight());
-                    int spp = 0;
-                    long renderTime = 0;
+                    DumpCanvas result = new DumpCanvas(task.getJob().getWidth(), task.getJob().getHeight(), task.getJob().getSpp());
                     for (Tile tile : task.getTiles()) {
                         if (tile.getDump().isPresent()) {
                             try (ResponseBody body = apiClient.downloadFile(tile.getDump().get().getUrl())) {
                                 RenderDump dump = RenderDump.load(body.byteStream(), TaskTracker.NONE);
-                                if (spp == 0) {
-                                    spp = dump.getMetadata().spp();
-                                }
-                                renderTime = Math.max(renderTime, dump.getMetadata().renderTime());
                                 result.pasteDumpAt(tile.getX(), tile.getY(), dump);
                             }
                         }
                     }
-                    resultDump = result.asDump(spp, renderTime);
+                    resultDump = result.asDump(0);
                 }
 
                 // Create thumbnail
