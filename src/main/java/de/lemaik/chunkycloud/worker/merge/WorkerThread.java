@@ -21,6 +21,7 @@ import de.lemaik.chunkycloud.worker.api.FinishMergeTaskResponse;
 import de.lemaik.chunkycloud.worker.api.MergeTask;
 import de.lemaik.chunkycloud.worker.api.Tile;
 import de.lemaik.chunkycloud.worker.api.WorkerApiClient;
+import de.lemaik.chunkycloud.worker.util.ImageUtil;
 import okhttp3.ResponseBody;
 import okio.Buffer;
 import org.slf4j.Logger;
@@ -80,19 +81,6 @@ public class WorkerThread extends Thread {
                     }
                 }
 
-                // Create thumbnail
-                double scale = Math.min(1.0, Math.min(512. / resultImage.getWidth(), 512. / resultImage.getHeight()));
-                int width = (int) Math.round(resultImage.getWidth() * scale);
-                int height = (int) Math.round(resultImage.getHeight() * scale);
-                BufferedImage thumbnailImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-                Graphics2D g = thumbnailImage.createGraphics();
-                try {
-                    g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                    g.drawImage(resultImage, 0, 0, width, height, null);
-                } finally {
-                    g.dispose();
-                }
-
                 // Merge tile dumps, if applicable
                 RenderDump resultDump = null;
                 if (task.getTiles().get(0).getDump().isPresent()) {
@@ -113,6 +101,9 @@ public class WorkerThread extends Thread {
                     }
                     resultDump = result.asDump(spp, renderTime);
                 }
+
+                // Create thumbnail
+                BufferedImage thumbnailImage = ImageUtil.createThumbnail(resultImage, 512, 512);
 
                 FinishMergeTaskResponse finishMergeResponse = apiClient.getMergeTaskUploadUrls(task.getJob().getId());
 
