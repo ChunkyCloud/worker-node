@@ -21,10 +21,15 @@ import java.util.List;
 
 public class MergeTask {
     private Job job;
+private FileReference scene;
     private List<Tile> tiles;
 
     public Job getJob() {
         return job;
+    }
+
+    public FileReference getScene() {
+        return scene;
     }
 
     public List<Tile> getTiles() {

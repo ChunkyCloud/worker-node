@@ -1,7 +1,10 @@
 package de.lemaik.chunkycloud.worker.util;
 
+import se.llbit.chunky.resources.BitmapImage;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 
 public class ImageUtil {
     /**
@@ -20,5 +23,18 @@ public class ImageUtil {
             graphics.dispose();
         }
         return thumbnail;
+    }
+
+    /**
+     * Create a {@link BufferedImage} from a {@link BitmapImage}.
+     *
+     * @param input Bitmap image
+     * @return Buffered image
+     */
+    public static BufferedImage bitmapImageToBufferedImage(BitmapImage input) {
+        BufferedImage dst = new BufferedImage(input.width, input.height, BufferedImage.TYPE_INT_ARGB);
+        int[] pixels = ((DataBufferInt) dst.getRaster().getDataBuffer()).getData();
+        System.arraycopy(input.data, 0, pixels, 0, input.data.length);
+        return dst;
     }
 }
