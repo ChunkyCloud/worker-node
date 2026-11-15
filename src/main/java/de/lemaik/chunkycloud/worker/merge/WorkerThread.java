@@ -107,15 +107,9 @@ public class WorkerThread extends Thread {
                         scene = JsonParser.parseReader(reader).getAsJsonObject();
                     }
                     PostProcessingFilter postprocess = PostProcessingFilters.getPostProcessingFilterFromId(scene.get("postprocess").getAsString()).orElse(PostProcessingFilters.NONE);
-                    double[] sampleBuffer = resultDump.getSampleBuffer();
-                    double[] buffer = new double[sampleBuffer.length];
-                    double invSpp = 1.0 / task.getJob().getSpp();
-                    for (int i = 0; i < sampleBuffer.length; i++) {
-                        buffer[i] = sampleBuffer[i] * invSpp;
-                    }
                     double exposure = scene.has("exposure") ? scene.get("exposure").getAsDouble() : 1.0;
                     BitmapImage output = new BitmapImage(task.getJob().getWidth(), task.getJob().getHeight());
-                    postprocess.processFrame(task.getJob().getWidth(), task.getJob().getHeight(), buffer, output, exposure, TaskTracker.Task.NONE);
+                    postprocess.processFrame(task.getJob().getWidth(), task.getJob().getHeight(), resultDump.getSampleBuffer(), output, exposure, TaskTracker.Task.NONE);
                     resultImage = ImageUtil.bitmapImageToBufferedImage(output);
 
                     if (scene.has("transparentSky") && scene.get("transparentSky").getAsBoolean()) {

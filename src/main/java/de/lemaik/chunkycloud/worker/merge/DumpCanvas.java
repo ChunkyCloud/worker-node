@@ -54,12 +54,14 @@ public class DumpCanvas {
                 System.arraycopy(dumpBuffer, srcOffset, buffer, dstOffset, dumpWidth * 3);
             }
         } else {
+            // Dump buffers contain sample averages, so weight each tile by its SPP.
+            double weight = (double) dump.getMetadata().spp() / totalSpp;
             for (int row = 0; row < dumpHeight; row++) {
                 int srcOffset = row * dumpWidth * 3;
                 int dstOffset = ((y + row) * width + x) * 3;
 
                 for (int i = 0; i < dumpWidth * 3; i++) {
-                    buffer[dstOffset + i] += dumpBuffer[srcOffset + i];
+                    buffer[dstOffset + i] += dumpBuffer[srcOffset + i] * weight;
                 }
             }
         }
