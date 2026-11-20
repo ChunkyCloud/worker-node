@@ -82,11 +82,13 @@ public class WorkerThread extends Thread {
                 RenderDump resultDump = null;
                 if (task.getTiles().get(0).getDump().isPresent()) {
                     DumpCanvas result = new DumpCanvas(task.getJob().getWidth(), task.getJob().getHeight(), task.getJob().getSpp());
+                    long renderTime = 0;
                     for (Tile tile : task.getTiles()) {
                         if (tile.getDump().isPresent()) {
                             try (ResponseBody body = apiClient.downloadFile(tile.getDump().get().getUrl())) {
                                 RenderDump dump = RenderDump.load(body.byteStream(), TaskTracker.NONE);
                                 result.pasteDumpAt(tile.getX(), tile.getY(), dump);
+                                renderTime += dump.getMetadata().renderTime();
 
                                 if (dump.getMetadata().spp() < task.getJob().getSpp()) {
                                     hasOverlappingTiles = true;
@@ -94,7 +96,7 @@ public class WorkerThread extends Thread {
                             }
                         }
                     }
-                    resultDump = result.asDump(0);
+                    resultDump = result.asDump(renderTime);
                 }
 
                 // Merge tile images
