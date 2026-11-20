@@ -17,8 +17,6 @@
 
 package de.lemaik.chunkycloud.worker.merge;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import de.lemaik.chunkycloud.worker.api.FinishMergeTaskResponse;
 import de.lemaik.chunkycloud.worker.api.MergeTask;
 import de.lemaik.chunkycloud.worker.api.Tile;
@@ -34,6 +32,9 @@ import se.llbit.chunky.renderer.renderdump.FloatingPointCompressorDumpFormat;
 import se.llbit.chunky.renderer.renderdump.RenderDump;
 import se.llbit.chunky.renderer.scene.Scene;
 import se.llbit.chunky.resources.BitmapImage;
+import se.llbit.json.JsonObject;
+import se.llbit.json.JsonParser;
+import se.llbit.util.Configurable;
 import se.llbit.util.TaskTracker;
 
 import javax.imageio.IIOImage;
@@ -45,7 +46,6 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.io.IOException;
-import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -103,16 +103,23 @@ public class WorkerThread extends Thread {
                     // create image from the dump (required if we have overlapping tiles, fewer downloads if we already have the dump)
                     JsonObject scene;
                     try (ResponseBody body = apiClient.downloadFile(task.getScene().getUrl());
-                         Reader reader = body.charStream()) {
-                        scene = JsonParser.parseReader(reader).getAsJsonObject();
+                         JsonParser parser = new JsonParser(body.byteStream())) {
+                        scene = parser.parse().asObject();
+                    } catch (JsonParser.SyntaxError e) {
+                        throw new IOException("Could not parse scene for postprocessing", e);
                     }
-                    PostProcessingFilter postprocess = PostProcessingFilters.getPostProcessingFilterFromId(scene.get("postprocess").getAsString()).orElse(PostProcessingFilters.NONE);
-                    double exposure = scene.has("exposure") ? scene.get("exposure").getAsDouble() : 1.0;
+                    PostProcessingFilter postprocess = PostProcessingFilters.getPostProcessingFilterFromId(
+                                    scene.get("postprocess").stringValue(Scene.DEFAULT_POSTPROCESSING_FILTER.getId()))
+                            .orElse(Scene.DEFAULT_POSTPROCESSING_FILTER);
+                    if (postprocess instanceof Configurable configurable) {
+                        configurable.loadConfiguration(scene.get("postprocessSettings").asObject());
+                    }
+                    double exposure = scene.get("exposure").doubleValue(1.0);
                     BitmapImage output = new BitmapImage(task.getJob().getWidth(), task.getJob().getHeight());
                     postprocess.processFrame(task.getJob().getWidth(), task.getJob().getHeight(), resultDump.getSampleBuffer(), output, exposure, TaskTracker.Task.NONE);
                     resultImage = ImageUtil.bitmapImageToBufferedImage(output);
 
-                    if (scene.has("transparentSky") && scene.get("transparentSky").getAsBoolean()) {
+                    if (scene.get("transparentSky").boolValue(false)) {
                         // if the scene has transparent sky, use the transparency from the tile images
                         Map<Rectangle, Tile> tiles = new HashMap<>();
                         for (Tile tile : task.getTiles()) {
