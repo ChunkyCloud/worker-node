@@ -18,6 +18,7 @@
 package de.lemaik.chunkycloud.worker.api;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import de.lemaik.chunkycloud.worker.Main;
 import okhttp3.*;
 import okio.Buffer;
@@ -80,6 +81,8 @@ public class WorkerApiClient {
             if (response.code() == 200) {
                 try (InputStreamReader reader = new InputStreamReader(response.body().byteStream())) {
                     return gson.fromJson(reader, MergeTask.class);
+                } catch (JsonParseException e) {
+                    throw new IOException("Could not parse the merge task response", e);
                 }
             } else if (response.code() == 204) {
                 return null;
@@ -96,6 +99,8 @@ public class WorkerApiClient {
             if (response.isSuccessful()) {
                 try (InputStreamReader reader = new InputStreamReader(response.body().byteStream())) {
                     return gson.fromJson(reader, FinishMergeTaskResponse.class);
+                } catch (JsonParseException e) {
+                    throw new IOException("Could not parse the merge upload URLs response", e);
                 }
             } else {
                 throw new IOException("The merge task could not be finished");

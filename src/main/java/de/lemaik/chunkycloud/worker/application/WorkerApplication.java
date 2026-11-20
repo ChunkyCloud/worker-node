@@ -28,6 +28,7 @@ import se.llbit.chunky.main.Version;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WorkerApplication {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkerApplication.class);
@@ -59,13 +60,18 @@ public class WorkerApplication {
         LOGGER.info("Chunky home: " + chunkyHome);
 
         worker = new WorkerThread(api);
+        AtomicBoolean workerFailed = new AtomicBoolean();
+        worker.setUncaughtExceptionHandler((thread, error) -> {
+            workerFailed.set(true);
+            LOGGER.error("Worker terminated unexpectedly", error);
+        });
         worker.start();
         try {
             worker.join();
         } catch (InterruptedException e) {
             LOGGER.warn("Worker interrupted", e);
         }
-        System.exit(0);
+        System.exit(workerFailed.get() ? 1 : 0);
     }
 
     public void stop() {
