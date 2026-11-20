@@ -73,6 +73,9 @@ public class WorkerThread extends Thread {
                     try (ResponseBody body = apiClient.downloadFile(tile.getImage().getUrl())) {
                         tileImage = ImageIO.read(body.byteStream());
                     }
+                    if (tileImage == null) {
+                        throw new IOException("Could not decode tile image at (" + tile.getX() + ", " + tile.getY() + ")");
+                    }
                     Graphics2D graphics = resultImage.createGraphics();
                     try {
                         graphics.drawImage(tileImage, tile.getX(), tile.getY(), null);
