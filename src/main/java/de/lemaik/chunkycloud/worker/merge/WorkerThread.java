@@ -78,6 +78,7 @@ public class WorkerThread extends Thread {
                     }
                     Graphics2D graphics = resultImage.createGraphics();
                     try {
+                        graphics.setComposite(AlphaComposite.Src);
                         graphics.drawImage(tileImage, tile.getX(), tile.getY(), null);
                     } finally {
                         graphics.dispose();
