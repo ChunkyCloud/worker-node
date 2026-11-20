@@ -125,6 +125,7 @@ public class WorkerThread extends Thread {
                                 if (tileImage == null) {
                                     throw new IOException("Could not decode tile image at (" + tile.getX() + ", " + tile.getY() + ")");
                                 }
+                                tileImage = ImageUtil.toIntArgb(tileImage);
                             }
 
                             // apply the tile's alpha channel to the result image

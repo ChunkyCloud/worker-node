@@ -37,4 +37,17 @@ public class ImageUtil {
         System.arraycopy(input.data, 0, pixels, 0, input.data.length);
         return dst;
     }
+
+    /**
+     * Converts an image to TYPE_INT_ARGB, returning the original if it already has that type.
+     */
+    public static BufferedImage toIntArgb(BufferedImage input) {
+        if (input.getType() == BufferedImage.TYPE_INT_ARGB) {
+            return input;
+        }
+        BufferedImage output = new BufferedImage(input.getWidth(), input.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        int[] pixels = ((DataBufferInt) output.getRaster().getDataBuffer()).getData();
+        input.getRGB(0, 0, input.getWidth(), input.getHeight(), pixels, 0, input.getWidth());
+        return output;
+    }
 }
