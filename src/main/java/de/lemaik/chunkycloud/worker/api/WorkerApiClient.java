@@ -38,11 +38,15 @@ public class WorkerApiClient {
     public WorkerApiClient(String baseUrl, String apiKey, File cacheDirectory,
                            long maxCacheSize) {
         this.baseUrl = baseUrl;
+        HttpUrl apiUrl = HttpUrl.get(baseUrl);
         client = new OkHttpClient.Builder()
                 .followRedirects(true)
                 .cache(new Cache(cacheDirectory, maxCacheSize))
                 .addInterceptor(chain -> {
-                    if (chain.request().url().toString().startsWith(baseUrl)) {
+                    HttpUrl requestUrl = chain.request().url();
+                    if (requestUrl.scheme().equals(apiUrl.scheme())
+                            && requestUrl.host().equals(apiUrl.host())
+                            && requestUrl.port() == apiUrl.port()) {
                         return chain.proceed(
                                 chain.request().newBuilder()
                                         .header("User-Agent",
