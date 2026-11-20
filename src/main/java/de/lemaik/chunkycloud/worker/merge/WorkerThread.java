@@ -26,8 +26,15 @@ import okhttp3.ResponseBody;
 import okio.Buffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.llbit.chunky.renderer.postprocessing.PostProcessingFilter;
+import se.llbit.chunky.renderer.postprocessing.PostProcessingFilters;
 import se.llbit.chunky.renderer.renderdump.FloatingPointCompressorDumpFormat;
 import se.llbit.chunky.renderer.renderdump.RenderDump;
+import se.llbit.chunky.renderer.scene.Scene;
+import se.llbit.chunky.resources.BitmapImage;
+import se.llbit.json.JsonObject;
+import se.llbit.json.JsonParser;
+import se.llbit.util.Configurable;
 import se.llbit.util.TaskTracker;
 
 import javax.imageio.IIOImage;
@@ -37,7 +44,10 @@ import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A worker node worker thread.
@@ -66,44 +76,107 @@ public class WorkerThread extends Thread {
                 LOGGER.info("Got merge task for job {}", task.getJob().getId());
                 long startTime = System.currentTimeMillis();
 
-                // Merge tile images
-                BufferedImage resultImage = new BufferedImage(task.getJob().getWidth(), task.getJob().getHeight(), BufferedImage.TYPE_INT_ARGB);
-                for (Tile tile : task.getTiles()) {
-                    BufferedImage tileImage;
-                    try (ResponseBody body = apiClient.downloadFile(tile.getImage().getUrl())) {
-                        tileImage = ImageIO.read(body.byteStream());
-                    }
-                    if (tileImage == null) {
-                        throw new IOException("Could not decode tile image at (" + tile.getX() + ", " + tile.getY() + ")");
-                    }
-                    Graphics2D graphics = resultImage.createGraphics();
-                    try {
-                        graphics.setComposite(AlphaComposite.Src);
-                        graphics.drawImage(tileImage, tile.getX(), tile.getY(), null);
-                    } finally {
-                        graphics.dispose();
-                    }
-                }
+                boolean hasOverlappingTiles = false;
 
                 // Merge tile dumps, if applicable
                 RenderDump resultDump = null;
                 if (task.getTiles().get(0).getDump().isPresent()) {
-                    DumpCanvas result = new DumpCanvas(task.getJob().getWidth(), task.getJob().getHeight());
-                    int spp = 0;
+                    DumpCanvas result = new DumpCanvas(task.getJob().getWidth(), task.getJob().getHeight(), task.getJob().getSpp());
                     long renderTime = 0;
                     for (Tile tile : task.getTiles()) {
                         if (tile.getDump().isPresent()) {
                             try (ResponseBody body = apiClient.downloadFile(tile.getDump().get().getUrl())) {
                                 RenderDump dump = RenderDump.load(body.byteStream(), TaskTracker.NONE);
-                                if (spp == 0) {
-                                    spp = dump.getMetadata().spp();
-                                }
-                                renderTime = Math.max(renderTime, dump.getMetadata().renderTime());
                                 result.pasteDumpAt(tile.getX(), tile.getY(), dump);
+                                renderTime += dump.getMetadata().renderTime();
+
+                                if (dump.getMetadata().spp() < task.getJob().getSpp()) {
+                                    hasOverlappingTiles = true;
+                                }
                             }
                         }
                     }
-                    resultDump = result.asDump(spp, renderTime);
+                    resultDump = result.asDump(renderTime);
+                }
+
+                // Merge tile images
+                BufferedImage resultImage;
+                if (hasOverlappingTiles) {
+                    // create image from the dump (required if we have overlapping tiles, fewer downloads if we already have the dump)
+                    JsonObject scene;
+                    try (ResponseBody body = apiClient.downloadFile(task.getScene().getUrl());
+                         JsonParser parser = new JsonParser(body.byteStream())) {
+                        scene = parser.parse().asObject();
+                    } catch (JsonParser.SyntaxError e) {
+                        throw new IOException("Could not parse scene for postprocessing", e);
+                    }
+                    PostProcessingFilter postprocess = PostProcessingFilters.getPostProcessingFilterFromId(
+                                    scene.get("postprocess").stringValue(Scene.DEFAULT_POSTPROCESSING_FILTER.getId()))
+                            .orElse(Scene.DEFAULT_POSTPROCESSING_FILTER);
+                    if (postprocess instanceof Configurable configurable) {
+                        configurable.loadConfiguration(scene.get("postprocessSettings").asObject());
+                    }
+                    double exposure = scene.get("exposure").doubleValue(1.0);
+                    BitmapImage output = new BitmapImage(task.getJob().getWidth(), task.getJob().getHeight());
+                    postprocess.processFrame(task.getJob().getWidth(), task.getJob().getHeight(), resultDump.getSampleBuffer(), output, exposure, TaskTracker.Task.NONE);
+                    resultImage = ImageUtil.bitmapImageToBufferedImage(output);
+
+                    if (scene.get("transparentSky").boolValue(false)) {
+                        // if the scene has transparent sky, use the transparency from the tile images
+                        Map<Rectangle, Tile> tiles = new HashMap<>();
+                        for (Tile tile : task.getTiles()) {
+                            tiles.put(new Rectangle(tile.getX(), tile.getY(), tile.getWidth(), tile.getHeight()), tile);
+                        }
+                        for (Tile tile : tiles.values()) {
+                            BufferedImage tileImage;
+                            try (ResponseBody body = apiClient.downloadFile(tile.getImage().getUrl())) {
+                                tileImage = ImageIO.read(body.byteStream());
+                                if (tileImage == null) {
+                                    throw new IOException("Could not decode tile image at (" + tile.getX() + ", " + tile.getY() + ")");
+                                }
+                                tileImage = ImageUtil.toIntArgb(tileImage);
+                            }
+
+                            // apply the tile's alpha channel to the result image
+                            // this works because both images are of type TYPE_INT_ARGB
+                            int[] dst = ((DataBufferInt) resultImage.getRaster()
+                                    .getDataBuffer()).getData();
+                            int dstWidth = resultImage.getWidth();
+
+                            int[] src = ((DataBufferInt) tileImage.getRaster()
+                                    .getDataBuffer()).getData();
+                            int srcWidth = tileImage.getWidth();
+
+                            for (int y = 0; y < tileImage.getHeight(); y++) {
+                                int srcOffset = y * srcWidth;
+                                int dstOffset = (tile.getY() + y) * dstWidth + tile.getX();
+
+                                for (int x = 0; x < srcWidth; x++) {
+                                    int i = dstOffset + x;
+                                    dst[i] = (dst[i] & 0x00FFFFFF)
+                                            | (src[srcOffset + x] & 0xFF000000);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    resultImage = new BufferedImage(task.getJob().getWidth(), task.getJob().getHeight(), BufferedImage.TYPE_INT_ARGB);
+                    for (Tile tile : task.getTiles()) {
+                        BufferedImage tileImage;
+                        try (ResponseBody body = apiClient.downloadFile(tile.getImage().getUrl())) {
+                            tileImage = ImageIO.read(body.byteStream());
+                            if (tileImage == null) {
+                                throw new IOException("Could not decode tile image at (" + tile.getX() + ", " + tile.getY() + ")");
+                            }
+                        }
+                        Graphics2D graphics = resultImage.createGraphics();
+                        graphics.setComposite(AlphaComposite.Src);
+                        try {
+                            graphics.drawImage(tileImage, tile.getX(), tile.getY(), null);
+                        } finally {
+                            graphics.dispose();
+                        }
+                    }
                 }
 
                 // Create thumbnail
